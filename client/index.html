@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <h1>TO DOS</h1>
+    <div>
+        <input id="todo-input">
+        <button id="add-todo-btn">Add to do</button>
+    </div>
+    <ul id="todo-list-ul">
+    </ul>
+    <script>
+        const todoInput = document.getElementById('todo-input');
+        const addTodoBtn = document.getElementById('add-todo-btn');
+        const todoListUL = document.getElementById('todo-list-ul');
+
+        addTodoBtn.addEventListener('click', () => {
+            // get the text from input
+            const newTodo = todoInput.value;
+            
+            //add stuff to the UL
+            //appState.todos.push({completed: false, label: newTodo})
+            addTodo({completed: false, label: newTodo})
+
+            //re-render app from state
+            renderState(appState)
+        })
+
+        const appState = {
+            todos: []
+        }
+
+        function renderState (stateObject) {
+            //do stuff
+            const {todos} = stateObject
+            todoListUL.innerHTML = todos.map((todo, index) => {
+                const checked = (todo.completed) ? 'checked' : ''
+                const {label} = todo
+
+                return `
+                    <li id="todo-${index}">
+                        <input id="check-${index}" class="todo-check" type="checkbox" ${checked}>
+                        ${todo.label}
+                        <button id="remove-${index}" class="remove-btn">x</button>
+                    </li>`
+            }).join('')
+
+            makeEventListeners()
+        }
+
+        function makeEventListeners() {
+            const removeBtns = document.querySelectorAll('.remove-btn')
+            removeBtns.forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    const id = event.target.id
+                    const index = Number(id.replace('remove-', ''))
+                    removeTodo(index)
+                })
+            })
+
+            const checkBoxes = document.querySelectorAll('.todo-check')
+            checkBoxes.forEach(box => {
+                box.addEventListener('click', (evt) => {
+                    const id = evt.target.id
+                    const index = Number(id.replace('check-', ''))
+                    const checked = evt.target.checked
+                    updateTodo(index, checked)
+                })
+            })
+        }
+
+        function addTodo (todo) {
+            fetch('/api/todos/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ todo })
+            }).then(getTodos)
+        }
+
+        function updateTodo (index, checked) {
+            fetch(`/api/todos/${index}/update`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ checked })
+            }).then(getTodos)
+        }
+
+        function removeTodo(index) {
+            appState.todos.splice(index, 1)
+            fetch(`/api/todos/${index}/remove`, {method: 'POST'}).then(getTodos)
+            //renderState(appState)
+        }
+
+        function getTodos() {
+            fetch('/api/todos', {
+                headers: {'Content-Type': 'application/json'}
+            }).then(response => response.json()).then(todos => {
+                appState.todos = todos
+                renderState(appState)
+            })
+        }
+
+        getTodos()
+    </script>
+</body>
+</html>
